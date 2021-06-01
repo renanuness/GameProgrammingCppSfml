@@ -39,11 +39,16 @@ void Bat::stopRight()
 	m_MovingRight = false;
 }
 
-void Bat::update(Time dt) 
+void Bat::update(Time dt)
 {
 	if (m_MovingLeft)
+	{
+		
 		m_Position.x -= m_Speed * dt.asSeconds();
+	}
 
 	if (m_MovingRight)
+	{
 		m_Position.x += m_Speed * dt.asSeconds();
+	}
 }
