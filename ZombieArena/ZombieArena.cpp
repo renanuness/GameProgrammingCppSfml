@@ -1,11 +1,15 @@
 #include <SFML/Graphics.hpp>
-#include "Player.h"
 #include "ZombieArena.h"
+#include "Player.h"
+#include "TextureHolder.h"
+#include "Bullet.h"
 
 using namespace sf;
 
 int main()
 {
+	TextureHolder holder;
+
 	enum class State { PAUSED, LEVELING_UP, GAME_OVER, PLAYING };
 
 	State state = State::GAME_OVER;
@@ -31,9 +35,27 @@ int main()
 	IntRect arena;
 
 	VertexArray background;
-	Texture textureBackground;
-	textureBackground.loadFromFile("graphics/background_sheet.png");
+	Texture textureBackground = TextureHolder::GetTexture("graphics/background_sheet.png");
 
+	int numZombies;
+	int numZombiesAlive;
+	Zombie* zombies = nullptr;
+
+	Bullet bullets[100];
+	int currentBullet = 0;
+	int bulletsSpare = 24;
+	int bulletsInClip = 6;
+	int clipSize = 6;
+	float fireRate = 1;
+
+	Time lastPressed;
+
+	window.setMouseCursorVisible(false);
+	Sprite spriteCrosshair;
+	Texture textureCrosshair = TextureHolder::GetTexture("graphics/crosshair.png");
+	spriteCrosshair.setTexture(textureCrosshair);
+	spriteCrosshair.setOrigin(25, 25);
+	
 	while (window.isOpen())
 	{
 		Event event;
@@ -59,7 +81,23 @@ int main()
 				}
 				if (state == State::PLAYING)
 				{
+					if (keyCode == Keyboard::R)
+					{
+						if (bulletsSpare >= clipSize)
+						{
+							bulletsInClip = clipSize;
+							bulletsSpare -= clipSize;
+						}
+						else if (bulletsSpare > 0)
+						{
+							bulletsInClip = bulletsSpare;
+							bulletsSpare = 0;
+						}
+						else
+						{
 
+						}
+					}
 				}
 			}
 		}
@@ -75,7 +113,6 @@ int main()
 				player.moveUp();
 			else
 				player.stopUp();
-
 		
 			if (Keyboard::isKeyPressed(Keyboard::S))
 				player.moveDown();
@@ -91,6 +128,25 @@ int main()
 				player.moveLeft();
 			else
 				player.stopLeft();
+
+			if (Mouse::isButtonPressed(sf::Mouse::Left))
+			{
+				if ((gameTimeTotal.asMilliseconds() - lastPressed.asMilliseconds()) > (1000 / fireRate) && 
+					bulletsInClip > 0)
+				{
+					bullets[currentBullet].shoot(
+						player.getCenter().x, player.getCenter().y,
+						mouseWorldPosition.x, mouseWorldPosition.y);
+
+					currentBullet++;
+
+					if (currentBullet > 99)
+						currentBullet = 0;
+
+					lastPressed = gameTimeTotal;
+					bulletsInClip--;
+				}
+			}
 		}
 
 		if (state == State::LEVELING_UP)
@@ -123,20 +179,22 @@ int main()
 
 			if (state == State::PLAYING)
 			{
-				// Prepare the level
-				// We will modify the next two lines later
 				arena.width = 500;
 				arena.height = 500;
 				arena.left = 0;
 				arena.top = 0;
 				
-				// We will modify this line of code later
 				
 				int tileSize = createBackground(background, arena);
-				// Spawn the player in the middle of the arena
+				
 				player.spawn(arena, resolution, tileSize);
 
-				// Reset the clock so there isn't a frame jump
+				numZombies = 15;
+
+				delete[] zombies;
+				zombies = createHorde(numZombies, arena);
+				numZombiesAlive = numZombies;
+				
 				clock.restart();
 			}
 		}
@@ -152,24 +210,50 @@ int main()
 			mouseScreenPosition = Mouse::getPosition();
 			mouseWorldPosition = window.mapPixelToCoords(Mouse::getPosition(), mainView);
 
+			spriteCrosshair.setPosition(mouseWorldPosition);
 			player.update(dtAsSeconds, Mouse::getPosition());
 
 			Vector2f playerPosition(player.getCenter());
 
 			mainView.setCenter(player.getCenter());
+
+			for (int i = 0; i < numZombies; i++)
+			{
+				if (zombies[i].isAlive())
+					zombies[i].update(dt.asSeconds(), playerPosition);
+			}
+
+			for (int i = 0; i < 100; i++)
+			{
+				if (bullets[i].isInFlight())
+					bullets[i].update(dtAsSeconds);
+			}
 		}
 
 
 		if (state == State::PLAYING)
 		{
 			window.clear();
-			// set the mainView to be displayed in the window
-			// And draw everything related to it
+			
 			window.setView(mainView);
-			// Draw the player
+			
 			window.draw(background, &textureBackground);
 
+			for (int i = 0; i < numZombies; i++)
+			{
+				window.draw(zombies[i].getSprite());
+			}
+
+			for (int i = 0; i < 100; i++)
+			{
+				if (bullets[i].isInFlight())
+				{
+					window.draw(bullets[i].getShape());
+				}
+			}
+
 			window.draw(player.getSprite());
+			window.draw(spriteCrosshair);
 		}
 		if (state == State::LEVELING_UP)
 		{
@@ -181,8 +265,9 @@ int main()
 		{
 		}
 		window.display();
-
 	}
+
+	delete[0] zombies;
 
 	return 0;
 }
