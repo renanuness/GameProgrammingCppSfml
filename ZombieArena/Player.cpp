@@ -136,8 +136,9 @@ void Player::update(float elapsedTime, Vector2i mousePosition)
 	{
 		m_Position.x -= m_Speed * elapsedTime;
 	}
+
 	m_Sprite.setPosition(m_Position);
-	// Keep the player in the arena
+	
 	if (m_Position.x > m_Arena.width - m_TileSize)
 	{
 		m_Position.x = m_Arena.width - m_TileSize;

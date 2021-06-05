@@ -27,6 +27,8 @@ void Bullet::shoot(float startX, float startY, float targetX, float targetY)
 	m_MinY = startY - range;
 	m_MaxY = startY + range;
 
+	
+
 	m_BulletShape.setPosition(m_Position);
 }
 
